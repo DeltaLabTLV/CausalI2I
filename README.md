@@ -5,6 +5,25 @@ This repository is organized to support full reproducibility of the preprocessin
 
 ---
 
+## Paper & Auxiliary Material
+
+This repository accompanies the paper:
+
+**“Towards Causal Item–Item Link Mining in Organic CF Data”**
+
+- 📎 Auxiliary material: [`Auxilary_Material_to_Main_Paper.pdf`](./Auxilary_Material_to_Main_Paper.pdf)
+
+The auxiliary document includes:
+- Additional derivations for the ATE standard deviation estimator
+- Full synthetic data generation procedure and oracle ground truth
+- Complete LLM labeling protocol
+- Full specification of the Outcome Model (OM)
+- Extended experimental results
+
+For full methodological details beyond the main text, please refer to the auxiliary material.
+
+---
+
 ## Required Artifacts
 
 To keep this repository lightweight and suitable for version control, large intermediate files (processed datasets, trained models, and experimental outputs) are stored separately.
@@ -83,8 +102,14 @@ Otherwise, you may directly execute the notebook corresponding to the component 
 Pick the dataset(s) you want and run the matching processor notebook(s). These outputs are required by every later step.
 
 2. **2_Propensities**  
-`2_Propensities/train_MF.ipynb` trains a Matrix Factorization model on `CausalI2I_artifacts/Datasets/Processed/<DATASET>/train.csv` (with validation on `test.csv`) and saves the propensity model to `CausalI2I_artifacts/Propensity_Models/MF<n_factors>_<DATASET>.pt`.  
-This model provides propensity scores used in later evaluation.
+`2_Propensities/train_MF.ipynb` trains a Matrix Factorization model on `CausalI2I_artifacts/Datasets/Processed/<DATASET>/train.csv` (with validation on `test.csv`) and saves:
+- `CausalI2I_artifacts/Propensity_Models/MF_model_<DATASET>.pt`
+- `CausalI2I_artifacts/Propensity_Models/MF_params_<DATASET>.pkl`  
+These files are used by the later baseline and evaluation steps.
+
+`2_Propensities/calibration_analysis.ipynb` is an optional follow-up notebook that loads the trained MF model and checks probability calibration on the processed dataset. It writes:
+- `CausalI2I_artifacts/Figures/<DATASET>/calibration_plot.jpeg`
+- `CausalI2I_artifacts/Propensity_Models/Calibration_Pickle.pkl`
 
 3. **3_ChatGPT**  
 *Note: You do not have to run this step if `CausalI2I_artifacts` already contains GPT results from previous runs.* 
@@ -92,22 +117,93 @@ This model provides propensity scores used in later evaluation.
 `3_ChatGPT/run_GPT.py` sends the chosen title pairs to the OpenAI API (model `gpt-5.2`) in batches and writes results to `CausalI2I_artifacts/API_Results/<DATASET>/causal_scores_final_YYYY-MM-DD.csv` (plus a partial file during the run).  
 You must have `~/secret_api_key.txt` with your API key, and the `prompts/` files must match the dataset you select.
 
-4. **4_SASRec**  
-`4_SASRec/SASRec_train.ipynb` loads `CausalI2I_artifacts/Datasets/Processed/<DATASET>/data_sasrec.csv`, trains a SASRec model, and saves `CausalI2I_artifacts/SASRec_Models/sasrec_<DATASET>.pt` plus `sasrec_<DATASET>_init_dict.pkl`.  
-These files are required for evaluation.
+4. **4_Baselines**  
+This stage prepares the learned baseline models used in the main evaluation.
+
+`4_Baselines/4.1_SASRec/SASRec_train.ipynb` loads `CausalI2I_artifacts/Datasets/Processed/<DATASET>/data_sasrec.csv`, trains a SASRec model, and saves:
+- `CausalI2I_artifacts/SASRec_Models/sasrec_<DATASET>.pt`
+- `CausalI2I_artifacts/SASRec_Models/sasrec_<DATASET>_init_dict.pkl`
+
+`4_Baselines/4.2_OutcomeModel/prepare_dataset.ipynb` uses the processed dataset and `Chosen_Pairs/<DATASET>_chosen_pairs.pkl` to create:
+- `CausalI2I_artifacts/Datasets/Processed/<DATASET>/om_train.csv`
+- `CausalI2I_artifacts/Datasets/Processed/<DATASET>/om_test.csv`
+
+`4_Baselines/4.2_OutcomeModel/train_OM.ipynb` loads those files together with the MF propensity model and saves:
+- `CausalI2I_artifacts/Outcome_Models/OM_<DATASET>.pt`
+
+The outputs of all three notebooks are consumed by step 5.
 
 5. **5_Evaluation**  
-`5_Evaluation/calculate_metrics.ipynb` loads the processed dataset, the propensity model, GPT results from `API_Results`, and the SASRec model. It computes ATE/STD and baseline scores and writes `CausalI2I_artifacts/Datasets/Evaluated/<DATASET>_evaluated.csv`.  
-`5_Evaluation/comparison.ipynb` reads that evaluated file and generates figures in `CausalI2I_artifacts/Figures/<DATASET>/`, including `ate_ste_vs_causal_effect.png`, `precision_recall_at_k.png`, `pr_roc_curves.png`, and `metric_distribution_by_causal_effect.png`.
+This stage now has four notebooks.
+
+`5_Evaluation/5.1_pre-calcuated_metrics.ipynb` precomputes baseline scores for the chosen item pairs using the MF, SASRec, and Outcome Model checkpoints, and writes:
+- `CausalI2I_artifacts/Datasets/Evaluated/SASRec/<DATASET>_sasrec_scores.pkl`
+- `CausalI2I_artifacts/Datasets/Evaluated/Outcome_Model/<DATASET>_om_scores.pkl`
+
+`5_Evaluation/5.2_calculate_metrics.ipynb` loads the processed dataset, `Chosen_Pairs/<DATASET>_chosen_pairs.pkl`, GPT results from `API_Results`, the MF model, and the cached SASRec / Outcome Model scores from `5.1`. It computes the causal metrics and writes:
+- `CausalI2I_artifacts/Datasets/Evaluated/<DATASET>_evaluated.csv`
+
+`5_Evaluation/5.3_comparison.ipynb` reads that evaluated file and generates figures in `CausalI2I_artifacts/Figures/<DATASET>/`, including:
+- `ate_ste_vs_causal_effect.jpeg`
+- `precision_recall_at_k.jpeg`
+- `pr_roc_curves.jpeg`
+- `metric_distribution_by_causal_effect.jpeg`
+- `ate_ste_performance_by_ess_bin.jpeg`
+
+`5_Evaluation/5.4_make_tables.ipynb` reads the evaluated CSV files and prints the LaTeX summary table used in the paper.
 
 6. **6_Sequels**  
-`6_Sequels/6.1_train_test_split.ipynb` builds a sequel-only dataset from Goodreads using `CausalI2I_artifacts/Datasets/Sequels/name2series.pkl` and `Datasets/Processed/goodreads/*`, then writes `CausalI2I_artifacts/Datasets/Sequels/train.csv`, `test.csv`, and `id2info.pkl`.  
-`6_Sequels/6.2_train_MF.ipynb` trains an MF model on the sequels dataset and saves `CausalI2I_artifacts/Propensity_Models/MF25_sequels.pt`.  
-`6_Sequels/6.3_calculate_metrics.ipynb` evaluates causal metrics for sequels using the MF model and the Goodreads SASRec model and writes `CausalI2I_artifacts/Datasets/Sequels/sequels_evaluated.csv`.  
-`6_Sequels/6.4_comparison.ipynb` generates the sequels figure `CausalI2I_artifacts/Figures/sequels/Binned Precision.png`.
+This stage evaluates the sequel-specific Goodreads subset.
+
+`6_Sequels/6.1_train_test_split.ipynb` builds a sequel-only dataset from Goodreads using `CausalI2I_artifacts/Datasets/Sequels/name2series.pkl` together with `Datasets/Processed/goodreads/*`, then writes:
+- `CausalI2I_artifacts/Datasets/Sequels/train.csv`
+- `CausalI2I_artifacts/Datasets/Sequels/test.csv`
+- `CausalI2I_artifacts/Datasets/Sequels/id2info.pkl`
+
+`6_Sequels/6.2_train_MF.ipynb` trains an MF model on the sequels dataset and saves:
+- `CausalI2I_artifacts/Propensity_Models/MF_sequels.pt`
+
+`6_Sequels/6.3_OutcomeModel/prepare_dataset.ipynb` creates:
+- `CausalI2I_artifacts/Datasets/Sequels/om_train.csv`
+- `CausalI2I_artifacts/Datasets/Sequels/om_test.csv`
+
+`6_Sequels/6.3_OutcomeModel/train_OM.ipynb` trains the sequel Outcome Model and saves:
+- `CausalI2I_artifacts/Outcome_Models/OM_sequels.pt`
+
+`6_Sequels/6.4_calculate_metrics.ipynb` evaluates sequel metrics using `MF_sequels.pt`, `OM_sequels.pt`, and the Goodreads SASRec model (`sasrec_goodreads.pt`), then writes:
+- `CausalI2I_artifacts/Datasets/Sequels/sequels_evaluated.csv`
+
+`6_Sequels/6.5_comparison.ipynb` reads that file and generates:
+- `CausalI2I_artifacts/Figures/sequels/Binned Precision.jpeg`
 
 7. **7_Simulation**  
-`7_Simulation/7.1_train_test_split.ipynb` loads `CausalI2I_artifacts/Datasets/Simulation/synthetic.csv` and `ground_truth.csv`, builds train/test splits, and writes `train.csv`, `test.csv`, and `ground_truth_processed.csv`.  
-`7_Simulation/7.2_train_MF.ipynb` trains an MF model on the simulation data and saves `CausalI2I_artifacts/Propensity_Models/MF20_simulation.pt`.  
-`7_Simulation/7.3_calculate_metrics.ipynb` evaluates causal metrics against the processed ground truth and writes `CausalI2I_artifacts/Datasets/Simulation/simulation_evaluated.csv`.  
-`7_Simulation/7.4_comparison.ipynb` creates simulation figures in `CausalI2I_artifacts/Figures/simulation/`, including `precision_recall_synthetic.png`, `pr_roc_synthetic.png`, `distribution_bins_synthetic.png`, and `scatter_ate_vs_ste_causal_effect_(linked_only).png`.
+This stage reproduces the synthetic-data experiment.
+
+`7_Simulation/7.1_train_test_split.ipynb` loads `CausalI2I_artifacts/Datasets/Simulation/synthetic.csv` and `ground_truth.csv`, builds train/test splits, and writes:
+- `CausalI2I_artifacts/Datasets/Simulation/train.csv`
+- `CausalI2I_artifacts/Datasets/Simulation/test.csv`
+- `CausalI2I_artifacts/Datasets/Simulation/data_sasrec.csv`
+- `CausalI2I_artifacts/Datasets/Simulation/ground_truth_processed.csv`
+
+`7_Simulation/7.2_train_MF.ipynb` trains an MF model on the simulation data and saves:
+- `CausalI2I_artifacts/Propensity_Models/MF_simulation.pt`
+
+`7_Simulation/7.3_Baselines/SASRec_train.ipynb` trains the simulation SASRec model and saves:
+- `CausalI2I_artifacts/SASRec_Models/sasrec_simulation.pt`
+- `CausalI2I_artifacts/SASRec_Models/sasrec_simulation_init_dict.pkl`
+
+`7_Simulation/7.3_Baselines/prepare_dataset.ipynb` creates:
+- `CausalI2I_artifacts/Datasets/Simulation/om_train.csv`
+- `CausalI2I_artifacts/Datasets/Simulation/om_test.csv`
+
+`7_Simulation/7.3_Baselines/train_OM.ipynb` trains the simulation Outcome Model and saves:
+- `CausalI2I_artifacts/Outcome_Models/OM_simulation.pt`
+
+`7_Simulation/7.4_calculate_metrics.ipynb` evaluates causal metrics against the processed ground truth using the MF, SASRec, and Outcome Model checkpoints, then writes:
+- `CausalI2I_artifacts/Datasets/Simulation/simulation_evaluated.csv`
+
+`7_Simulation/7.5_comparison.ipynb` creates simulation figures in `CausalI2I_artifacts/Figures/simulation/`, including:
+- `precision_recall_synthetic.jpeg`
+- `pr_roc_synthetic.jpeg`
+- `distribution_bins_synthetic.jpeg`
+- `scatter_ate_vs_ste_causal_effect_(linked_only).jpeg`

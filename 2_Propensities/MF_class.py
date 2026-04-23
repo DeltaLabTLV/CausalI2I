@@ -4,7 +4,13 @@ import matplotlib.pyplot as plt
 import torch
 from datetime import datetime
 
-np.random.seed(42)
+SEED = 42
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed_all(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 if np.random.choice(np.arange(1000)) != 102:
     raise ValueError("Random seed is not set correctly.")
 
