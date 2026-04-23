@@ -31,8 +31,8 @@ To keep this repository lightweight and suitable for version control, large inte
 Before running the code, please download the required artifacts archive:
 
 **CausalI2I_artifacts.zip**  
-Download link:  
-https://drive.google.com/file/d/1E-k1yPH3zLvZUw0qkRGP0spjKxoP_U8O/view?usp=sharing
+Download link:
+https://drive.google.com/file/d/1cIbvdXD8wGWbndEtiecYQ18y25i_BX2G/view?usp=drive_link
 
 After downloading:
 
