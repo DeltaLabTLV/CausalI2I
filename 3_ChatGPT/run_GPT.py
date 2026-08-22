@@ -56,7 +56,8 @@ print(f"Prompt: {PROMPT_FILE}")
 chosen_pairs_path = os.path.join(
     base_artifacts,
     "Chosen_Pairs",
-    f"{DATASET}_chosen_pairs.pkl"
+    DATASET,
+    "chosen_pairs_titles.pkl"
 )
 
 if not os.path.exists(chosen_pairs_path):
@@ -88,8 +89,10 @@ final_path   = os.path.join(results_dir, f"causal_scores_final_{get_now()[:10]}.
 # 4) Test API connection
 # -------------------------------------------------------
 
+MODEL = "gpt-5.6-luna"
+
 response = client.responses.create(
-    model="gpt-5.2",
+    model=MODEL,
     input="Answer only \'Connected to ChatGPT API successfully.\'"
 )
 
@@ -98,7 +101,7 @@ print(f'{get_now()} - {response.output_text}')
 # -------------------------------------------------------
 # 5) Process title pairs in batches and save results
 # -------------------------------------------------------
-def get_movies_causal_score(chunk, prompt, model="gpt-5.2"):
+def get_movies_causal_score(chunk, prompt, model=MODEL):
     history = ([
         {"role":"user", "content":prompt}
     ] + [
@@ -108,8 +111,7 @@ def get_movies_causal_score(chunk, prompt, model="gpt-5.2"):
     response = client.responses.create(
         model=model,
         input=history,
-        temperature=0,
-        top_p=1
+        reasoning={"effort": "low"},
     )
 
     return response.output_text.strip()
@@ -123,7 +125,11 @@ for i, batch in enumerate(batches, start=1):
 
     success = False
     for attempt in range(3):
-        response_text = get_movies_causal_score(batch, PROMPT)
+        response_text = get_movies_causal_score(
+            chunk=batch, 
+            prompt=PROMPT,
+            model=MODEL
+        )
         try:
             data = json.loads(response_text)
         except json.JSONDecodeError as e:
