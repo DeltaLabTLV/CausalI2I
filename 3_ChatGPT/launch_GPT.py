@@ -27,7 +27,7 @@ def ask(title, options):
 
 DATASET = ask(
     "Available datasets", 
-    ['ml-1m', 'steam', 'goodreads']
+    ['ml-1m', 'steam', 'goodreads', 'ml-10m']
 )
 
 
@@ -67,7 +67,8 @@ base_artifacts = os.path.join(PROJECT_ROOT, "CausalI2I_artifacts")
 chosen_pairs_path = os.path.join(
     base_artifacts,
     "Chosen_Pairs",
-    f"{DATASET}_chosen_pairs.pkl"
+    DATASET,
+    "chosen_pairs_titles.pkl"
 )
 
 prompt_path = os.path.join(
@@ -97,7 +98,7 @@ timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 log_file = os.path.join(results_dir, f"log_{timestamp}.txt")
 
 cmd = (
-    f"nohup python3 -u run_GPT.py "
+    f"nohup python -u run_GPT.py "
     f"--dataset {DATASET} "
     f"--prompt {PROMPT_FILE} "
     f"> '{log_file}' 2>&1 &"
