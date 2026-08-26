@@ -11,13 +11,12 @@ This repository accompanies the paper:
 
 **“Towards Causal Item–Item Link Mining in Organic CF Data”**
 
-- 📎 Auxiliary material: [`Auxilary_Material_to_Main_Paper.pdf`](./Auxilary_Material_to_Main_Paper.pdf)
+- 📎 [`Auxilary_Materials`](./Auxilary_Materials.pdf)
 
 The auxiliary document includes:
 - Additional derivations for the ATE standard deviation estimator
 - Full synthetic data generation procedure and oracle ground truth
 - Complete LLM labeling protocol
-- Full specification of the Outcome Model (OM)
 - Extended experimental results
 
 For full methodological details beyond the main text, please refer to the auxiliary material.
