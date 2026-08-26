@@ -11,7 +11,7 @@ This repository accompanies the paper:
 
 **“Towards Causal Item–Item Link Mining in Organic CF Data”**
 
-- 📎 [`Auxilary_Materials`](./Auxilary_Materials.pdf)
+- 📎 [`Auxiliary_Materials`](./Auxiliary_Materials.pdf)
 
 The auxiliary document includes:
 - Additional derivations for the ATE standard deviation estimator
